@@ -130,6 +130,37 @@ MiscVal + MoSold + YrSold" %>%
 
 ```
 
+```{r}
+# 1. Fit model to training data
+model_1 <- lm(model_formula, data = training)
+model_1
+```
+
+```{r}
+fitted_points_1 <- model_1 %>%
+  broom::augment()
+fitted_points_1
+```
+
+```{r}
+predicted_points_1 <- model_1 %>%
+  broom::augment(newdata = training)
+predicted_points_1
+```
+
+```{r}
+
+min <- min(predicted_points_1$.fitted, na.rm = TRUE)
+max <- max(predicted_points_1$.fitted, na.rm = TRUE)
+
+runif(1, min=min, max=max)
+
+
+```
+
+```{r}
+predicted_points <- mutate(predicted_points_1, .fitted = ifelse(is.na(.fitted),  runif(1, min=min, max=max), .fitted))
+```
 
 
 ***
