@@ -1,0 +1,233 @@
+---
+title: "SDS/CSC 293 Mini-Project 5: LASSO"
+author: "Group XX: WRITE YOUR NAMES HERE"
+date: "Thursday, May 2^nd^, 2019"
+output:
+  html_document:
+    highlight: tango
+    theme: cosmo
+    toc: yes
+    toc_depth: 2
+    toc_float:
+      collapsed: true
+    df_print: kable
+---
+
+```{r setup, include=FALSE}
+# Load all your packages here:
+library(tidyverse)
+library(glmnet)
+library(modelr)
+library(broom)
+library(skimr)
+library(Metrics)
+
+# Set default behavior for all code chunks here:
+knitr::opts_chunk$set(
+  echo = TRUE, warning = FALSE, message = FALSE,
+  fig.width = 16/2, fig.height = 9/2
+)
+
+# Set seed value of random number generator here. This is in order to get
+# "replicable" randomness, so that any results based on random sampling or
+# resampling are replicable everytime you knit this file. Why use a seed value
+# of 76? For no other reason than 76 is one of my favorite numbers:
+# https://www.youtube.com/watch?v=xjJ7FheCkCU
+set.seed(76)
+```
+
+You will be submiting an entry to Kaggle's [House Prices: Advanced Regression Techniques](https://www.kaggle.com/c/house-prices-advanced-regression-techniques/){target="_blank"} by fitting a fitted ~~spline~~, ~~multiple regression~~ LASSO regularized multiple regression model $\hat{f}(x)$.
+
+However of the original 1460 rows of the `training` data, in the `data/` folder you are given a `train.csv` consisting of only 50 of the rows!
+
+
+
+***
+
+
+
+# Load data
+
+Read in data provided by Kaggle for this competition. They are organized in the `data/` folder of this RStudio project:
+
+```{r}
+training <- read_csv("data/train.csv") %>% 
+  rename(
+    FirstFlrSF = `1stFlrSF`,
+    SecondFlrSF = `2ndFlrSF`,
+    ThirdSsnPorch = `3SsnPorch`
+  ) %>% 
+  # Fit your models to this outcome variable:
+  mutate(log_SalePrice = log(SalePrice+1))
+
+test <- read_csv("data/test.csv")%>% 
+  rename(
+    FirstFlrSF = `1stFlrSF`,
+    SecondFlrSF = `2ndFlrSF`,
+    ThirdSsnPorch = `3SsnPorch`
+  )
+sample_submission <- read_csv("data/sample_submission.csv")
+
+# Function that takes in a LASSO fit object and returns a "tidy" data frame of
+# the beta-hat coefficients for each lambda value used in LASSO fit. 
+get_LASSO_coefficients <- function(LASSO_fit){
+  beta_hats <- LASSO_fit %>%
+    broom::tidy(return_zeros = TRUE) %>%
+    select(term, estimate, lambda) %>%
+    arrange(desc(lambda))
+  return(beta_hats)
+}
+```
+
+
+## Look at your data!
+
+Always, ALWAYS, **ALWAYS** start by looking at your raw data. This gives you visual sense of what information you have to help build your predictive models. To get a full description of each variable, read the data dictionary in the `data_description.txt` file in the `data/` folder.
+
+Note that the following code chunk has `eval = FALSE` meaning "don't evaluate this chunk with knitting" because `.Rmd` files won't knit if they include a `View()`:
+
+```{r, eval = FALSE}
+View(training)
+glimpse(training)
+
+View(test)
+glimpse(test)
+
+# Pay close attention to the variables and variable types in sample_submission. 
+# Your submission must match this exactly.
+glimpse(sample_submission)
+
+# Hint:
+skim(training)
+skim(test)
+```
+
+
+
+***
+
+
+
+# Minimally viable product
+
+Since we have already performed exploratory data analyses of this data in MP1 and MP2, let's jump straight into the modeling. For this phase:
+
+* Train an unregularized standard multiple regression model $\widehat{f}_1$ using **all** 36 numerical variables as predictors.
+
+
+```{r}
+# Train your model here:
+
+# Model formula
+model_formula <- "log_SalePrice ~ MSSubClass + LotFrontage + LotArea + 
+OverallQual + OverallCond + YearBuilt + YearRemodAdd + MasVnrArea + BsmtFinSF1 + 
+BsmtFinSF2 + BsmtUnfSF + TotalBsmtSF + FirstFlrSF + SecondFlrSF + LowQualFinSF + 
+GrLivArea + BsmtFullBath + BsmtHalfBath + FullBath + HalfBath + BedroomAbvGr + 
+KitchenAbvGr + TotRmsAbvGrd + Fireplaces + GarageYrBlt + GarageCars + GarageArea + 
+WoodDeckSF + OpenPorchSF + EnclosedPorch + ThirdSsnPorch + ScreenPorch + PoolArea + 
+MiscVal + MoSold + YrSold" %>% 
+  as.formula()
+
+```
+
+
+
+***
+
+
+
+# Due diligence
+
+* Compute two RMLSE's of the fitted model $\widehat{f}_1$
+      a) on the `training` data. You may use a function from a package to achieve this.
+      b) on the `test` data via a submission to Kaggle `data/submit_regression.csv`.
+* Compare the two RMLSE's. If they are different, comment on why they might be different.
+
+```{r}
+# Compute both RMLSE's here:
+
+```
+
+RMLSE on training  | RMLSE on test (via Kaggle)
+------------- | -------------
+X             | Y
+
+
+
+
+***
+
+
+
+# Reaching for the stars
+
+1. Find the $\lambda^*$ tuning parameter that yields the LASSO model with the
+lowest estimated RMLSE as well as this lowest RMLSE as well. You may use functions included in a package for this.
+1. Convince yourself with a visualization that the $\lambda^*$ you found is indeed the one that returns the lowest estimated RMLSE.
+1. What is the model $\widehat{f}$_2 resulting from this $\lambda^*$? Output a data frame of the $\widehat{\beta}$.
+1. Visualize the progression of $\widehat{\beta}$ for different $\lambda$ values and mark $\lambda^*$ with a vertical line:
+
+```{r}
+# Find lambda star:
+
+```
+
+```{r}
+# Create visualization here:
+
+```
+
+```{r}
+# Output data frame of beta-hats for the LASSO model that uses lambda_star:
+
+```
+
+```{r}
+# Visualize the progression of beta-hats for different lambda values and mark lambda_star with a vertical line:
+
+```
+
+
+
+***
+
+
+
+# Point of diminishing returns
+
+1. In qualitative language, comment on the resulting amoung of shrinkage in the LASSO model?
+1. Obtain the RMLSE of the fitted model
+      a) on the `training` data
+      b) on the `test` data via a submission to Kaggle `data/submit_LASSO.csv` that we will test.
+1. Compare the two RMLSE's. If they are different, comment on why they might be different.
+
+```{r}
+# Compute both RMLSE's here:
+
+```
+
+Comparing both RMLSE's here:
+
+Method           | RMLSE on training  | RMLSE on test (via Kaggle)
+---------------- | ------------------ | -------------
+Unregularized lm | X                  | Y
+LASSO            | A                  | B
+
+
+
+***
+
+
+# Polishing the cannonball
+
+1. Fit a LASSO model $\widehat{f}_3$ that uses categorical variables as well.
+1. Output a `data/submit_LASSO_2.csv`
+1. Submit to Kaggle and replace the screenshot below with an screenshot of your score.
+1. Try to get the best Kaggle leaderboard score!
+
+![](score_screenshot.png){ width=100% }
+
+
+
+
+
