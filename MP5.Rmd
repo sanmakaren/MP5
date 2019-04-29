@@ -228,10 +228,26 @@ lowest estimated RMLSE as well as this lowest RMLSE as well. You may use functio
 ```{r}
 # Find lambda star:
 
+training <- training %>%
+  select(log_SalePrice, MSSubClass,  LotFrontage,  LotArea,  
+        OverallQual,  OverallCond,  YearBuilt, YearRemodAdd, MasVnrArea, BsmtFinSF1, 
+        BsmtFinSF2,  BsmtUnfSF, TotalBsmtSF, FirstFlrSF, SecondFlrSF, LowQualFinSF,
+        GrLivArea, BsmtFullBath, BsmtHalfBath, FullBath, HalfBath, BedroomAbvGr, 
+        KitchenAbvGr, TotRmsAbvGrd, Fireplaces, GarageYrBlt, GarageCars, GarageArea,
+        WoodDeckSF, OpenPorchSF, EnclosedPorch, ThirdSsnPorch, ScreenPorch, PoolArea,
+        MiscVal, MoSold, YrSold)
+
+library(randomForest)
+library(missForest)
+
+
+training.mis <- prodNA(training, noNA = 0.1)
+training.imp <- missForest(training.mis)
+
 x_matrix <- training %>%
   modelr::model_matrix(model_formula, data = .) %>%
   select(-`(Intercept)`) %>%
-as.matrix()
+  as.matrix()
 
 
 lambda_inputs <- seq(from = 0, to = 1000)
