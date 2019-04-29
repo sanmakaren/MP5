@@ -23,6 +23,8 @@ library(modelr)
 library(broom)
 library(skimr)
 library(Metrics)
+library(randomForest)
+library(Hmisc)
 
 # Set default behavior for all code chunks here:
 knitr::opts_chunk$set(
@@ -79,6 +81,35 @@ get_LASSO_coefficients <- function(LASSO_fit){
     arrange(desc(lambda))
   return(beta_hats)
 }
+
+
+
+#data imputation 
+training <- training %>%
+  select(log_SalePrice, MSSubClass,  LotFrontage,  LotArea,  
+        OverallQual,  OverallCond,  YearBuilt, YearRemodAdd, MasVnrArea, BsmtFinSF1, 
+        BsmtFinSF2,  BsmtUnfSF, TotalBsmtSF, FirstFlrSF, SecondFlrSF, LowQualFinSF,
+        GrLivArea, BsmtFullBath, BsmtHalfBath, FullBath, HalfBath, BedroomAbvGr, 
+        KitchenAbvGr, TotRmsAbvGrd, Fireplaces, GarageYrBlt, GarageCars, GarageArea,
+        WoodDeckSF, OpenPorchSF, EnclosedPorch, ThirdSsnPorch, ScreenPorch, PoolArea,
+        MiscVal, MoSold, YrSold)
+
+
+
+training2.mis <- prodNA(training2, noNA = 0.1)
+
+
+training2.mis$LotFrontage <- with(training2, impute(LotFrontage, median))
+training2.mis$OverallQual <- with(training2, impute(OverallQual, median))
+training2.mis$LotArea <- with(training2, impute(LotArea, median))
+
+training.mis <- prodNA(training, noNA = 0.1)
+
+for (i in names(training)){
+  training.mis[[i]] <- with(training, impute(training[[i]], median))
+}
+
+
 ```
 
 
@@ -228,21 +259,9 @@ lowest estimated RMLSE as well as this lowest RMLSE as well. You may use functio
 ```{r}
 # Find lambda star:
 
-training <- training %>%
-  select(log_SalePrice, MSSubClass,  LotFrontage,  LotArea,  
-        OverallQual,  OverallCond,  YearBuilt, YearRemodAdd, MasVnrArea, BsmtFinSF1, 
-        BsmtFinSF2,  BsmtUnfSF, TotalBsmtSF, FirstFlrSF, SecondFlrSF, LowQualFinSF,
-        GrLivArea, BsmtFullBath, BsmtHalfBath, FullBath, HalfBath, BedroomAbvGr, 
-        KitchenAbvGr, TotRmsAbvGrd, Fireplaces, GarageYrBlt, GarageCars, GarageArea,
-        WoodDeckSF, OpenPorchSF, EnclosedPorch, ThirdSsnPorch, ScreenPorch, PoolArea,
-        MiscVal, MoSold, YrSold)
-
-library(randomForest)
-library(missForest)
 
 
-training.mis <- prodNA(training, noNA = 0.1)
-training.imp <- missForest(training.mis)
+
 
 x_matrix <- training %>%
   modelr::model_matrix(model_formula, data = .) %>%
