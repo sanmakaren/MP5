@@ -251,7 +251,10 @@ get_LASSO_coefficients(LASSO_fit_c) %>%
   # Plot:
   ggplot(aes(x = lambda, y = estimate, col = term)) +
   geom_line() +
-labs(x = "lambda", y = "beta-hat")
+  labs(x = "lambda", y = "beta-hat") +
+  ylim(-.25, .25) +
+  xlim(0,1)
+
 
 ```
 
