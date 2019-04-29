@@ -82,26 +82,10 @@ get_LASSO_coefficients <- function(LASSO_fit){
   return(beta_hats)
 }
 
-
+training$Alley <- NULL
 
 #data imputation 
-training <- training %>%
-  select(log_SalePrice, MSSubClass,  LotFrontage,  LotArea,  
-        OverallQual,  OverallCond,  YearBuilt, YearRemodAdd, MasVnrArea, BsmtFinSF1, 
-        BsmtFinSF2,  BsmtUnfSF, TotalBsmtSF, FirstFlrSF, SecondFlrSF, LowQualFinSF,
-        GrLivArea, BsmtFullBath, BsmtHalfBath, FullBath, HalfBath, BedroomAbvGr, 
-        KitchenAbvGr, TotRmsAbvGrd, Fireplaces, GarageYrBlt, GarageCars, GarageArea,
-        WoodDeckSF, OpenPorchSF, EnclosedPorch, ThirdSsnPorch, ScreenPorch, PoolArea,
-        MiscVal, MoSold, YrSold)
 
-
-
-training2.mis <- prodNA(training2, noNA = 0.1)
-
-
-training2.mis$LotFrontage <- with(training2, impute(LotFrontage, median))
-training2.mis$OverallQual <- with(training2, impute(OverallQual, median))
-training2.mis$LotArea <- with(training2, impute(LotArea, median))
 
 training.mis <- prodNA(training, noNA = 0.1)
 
