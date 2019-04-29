@@ -98,6 +98,14 @@ for (i in names(training)){
   }
 }
 
+test.mis <- prodNA(test, noNA = 0.1)
+
+for (i in names(test)){
+  if(is.numeric(test[[i]])){
+    test.mis[[i]] <- with(test, impute(test[[i]], median))
+  }
+}
+
 
 ```
 
@@ -190,12 +198,14 @@ rmsle_train
 
 ```{r}
 predict_test <- model_1 %>%
-  broom::augment(newdata = test)
+  broom::augment(newdata = test.mis)
   
 ```
 
 
 ```{r}
+
+
 submission <- test %>%
   mutate(SalePrice = exp(predict_test$.fitted)) %>%
   select(Id, SalePrice)
@@ -234,14 +244,10 @@ x_matrix <- training.mis %>%
 
 
 lambda_inputs <- seq(from = 0, to = 1000)
+lambda_inputs <- seq(from = 0, to = 1, length.out = 10)
 
 LASSO_fit_c <- glmnet(x = x_matrix, y = training$log_SalePrice, alpha = 1, lambda = lambda_inputs)
 ```
-
-
-
-
-
 
 
 
