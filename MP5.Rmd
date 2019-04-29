@@ -82,15 +82,20 @@ get_LASSO_coefficients <- function(LASSO_fit){
   return(beta_hats)
 }
 
-training$Alley <- NULL
+
 
 #data imputation 
 
+library(randomForest)
+library(Hmisc)
+library(missForest)
 
 training.mis <- prodNA(training, noNA = 0.1)
 
 for (i in names(training)){
-  training.mis[[i]] <- with(training, impute(training[[i]], median))
+  if(is.numeric(training[[i]])){
+    training.mis[[i]] <- with(training, impute(training[[i]], median))
+  }
 }
 
 
@@ -149,7 +154,7 @@ MiscVal + MoSold + YrSold" %>%
 
 ```{r}
 # 1. Fit model to training data
-model_1 <- lm(model_formula, data = training)
+model_1 <- lm(model_formula, data = training.mis)
 model_1
 ```
 
@@ -161,21 +166,8 @@ fitted_points_1
 
 ```{r}
 predicted_points_1 <- model_1 %>%
-  broom::augment(newdata = training)
+  broom::augment(newdata = training.mis)
 predicted_points_1
-```
-
-```{r}
-
-min <- min(predicted_points_1$.fitted, na.rm = TRUE)
-max <- max(predicted_points_1$.fitted, na.rm = TRUE)
-
-
-
-```
-
-```{r}
-predicted_points_1 <- mutate(predicted_points_1, .fitted = ifelse(is.na(.fitted),  runif(1, min=min, max=max), .fitted))
 ```
 
 
@@ -202,15 +194,6 @@ predict_test <- model_1 %>%
   
 ```
 
-
-```{r}
-min <- min(predict_test$.fitted, na.rm = TRUE)
-max <- max(predict_test$.fitted, na.rm = TRUE)
-```
-
-```{r}
-predict_test <- mutate(predict_test, .fitted = ifelse(is.na(.fitted),  runif(1, min=min, max=max), .fitted))
-```
 
 ```{r}
 submission <- test %>%
@@ -244,10 +227,7 @@ lowest estimated RMLSE as well as this lowest RMLSE as well. You may use functio
 # Find lambda star:
 
 
-
-
-
-x_matrix <- training %>%
+x_matrix <- training.mis %>%
   modelr::model_matrix(model_formula, data = .) %>%
   select(-`(Intercept)`) %>%
   as.matrix()
