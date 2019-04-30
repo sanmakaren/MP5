@@ -163,19 +163,16 @@ MiscVal + MoSold + YrSold" %>%
 ```{r}
 # 1. Fit model to training data
 model_1 <- lm(model_formula, data = training.mis)
-model_1
 ```
 
 ```{r}
 fitted_points_1 <- model_1 %>%
   broom::augment()
-fitted_points_1
 ```
 
 ```{r}
 predicted_points_1 <- model_1 %>%
   broom::augment(newdata = training.mis)
-predicted_points_1
 ```
 
 
@@ -204,8 +201,6 @@ predict_test <- model_1 %>%
 
 
 ```{r}
-
-
 submission <- test %>%
   mutate(SalePrice = exp(predict_test$.fitted)) %>%
   select(Id, SalePrice)
@@ -236,42 +231,82 @@ lowest estimated RMLSE as well as this lowest RMLSE as well. You may use functio
 ```{r}
 # Find lambda star:
 
-
 x_matrix <- training.mis %>%
   modelr::model_matrix(model_formula, data = .) %>%
   select(-`(Intercept)`) %>%
-  as.matrix()
+as.matrix()
 
 
-lambda_inputs <- seq(from = 0, to = 1000)
-lambda_inputs <- seq(from = 0, to = 1, length.out = 10)
+#lambda_inputs <- seq(from = 0, to = 1000)
+lambda_inputs <- 10^seq(from = -5, to = 3, length = 100)
 
-LASSO_fit_c <- glmnet(x = x_matrix, y = training$log_SalePrice, alpha = 1, lambda = lambda_inputs)
+LASSO_fit <- glmnet(x = x_matrix, y = training$log_SalePrice, alpha = 1, lambda = lambda_inputs)
+
+LASSO_CV <- cv.glmnet(
+  x = x_matrix,
+  y = training$log_SalePrice,
+  alpha = 1,
+  lambda = lambda_inputs,
+  nfolds = 10,
+  type.measure = "mse"
+)
+
+# Alas that output is not useful, so let's broom::tidy() it
+LASSO_CV %>%
+  broom::tidy() %>%
+  rename(mse = estimate)
+
+# What is te smallest estimated mse?
+LASSO_CV %>%
+  broom::tidy() %>%
+  rename(mse = estimate) %>%
+  arrange(mse)
+
+# The lambda_star is in the top row. We can extract this lambda_star value from
+# the LASSO_CV object:
+lambda_star <- LASSO_CV$lambda.min
+lambda_star
+
 ```
 
 
 
 ```{r}
 # Create visualization here:
-get_LASSO_coefficients(LASSO_fit_c) %>%
-  # Plot:
-  ggplot(aes(x = lambda, y = estimate, col = term)) +
-  geom_line() +
-  labs(x = "lambda", y = "beta-hat") +
-  ylim(-.25, .25) +
-  xlim(0,1)
+LASSO_CV <- LASSO_CV %>%
+  broom::tidy() %>%
+  rename(mse = estimate) %>%
+  arrange(mse) 
+
+  # plot:
+LASSO_CV %>%
+  ggplot(aes(x = lambda)) +
+  geom_point(aes(y = mse)) +
+  scale_x_log10() +
+  labs(x = "lambda (log10-scale)", y = "Estimated RMSLE") +
+  geom_vline(xintercept = lambda_star, linetype = "dashed", col = "blue")
 
 
 ```
 
 ```{r}
 # Output data frame of beta-hats for the LASSO model that uses lambda_star:
-
+get_LASSO_coefficients(LASSO_fit) %>%
+  filter(lambda == lambda_star)
 ```
 
 ```{r}
 # Visualize the progression of beta-hats for different lambda values and mark lambda_star with a vertical line:
+LASSO_coefficients_plot <- get_LASSO_coefficients(LASSO_fit) %>%
+  filter(term != "(Intercept)") %>%
+  # Plot:
+  ggplot(aes(x = lambda, y = estimate, col = term)) +
+  geom_line() +
+  labs(x = "lambda (log10-scale)", y = "beta-hat") +
+  scale_x_log10() 
 
+LASSO_coefficients_plot + 
+  geom_vline(xintercept = lambda_star, color = "black", size = 2)
 ```
 
 
@@ -291,6 +326,27 @@ get_LASSO_coefficients(LASSO_fit_c) %>%
 ```{r}
 # Compute both RMLSE's here:
 
+#RMSLE for training
+min(LASSO_CV$mse)
+
+LASSO_fit_train <- glmnet(x = x_matrix, y = training$log_SalePrice, alpha = 1, lambda = lambda_star)
+
+x_matrix_test <- test.mis %>%
+  # Create temporary outcome variance just to get model matrix to work:
+  mutate(log_SalePrice = 1) %>%
+  modelr::model_matrix(model_formula, data = .) %>%
+  select(-`(Intercept)`) %>%
+as.matrix()
+
+# Predict y_hat's for test data using model and same lambda = 10.
+test.mis <- test.mis %>%
+  mutate(y_hat_LASSO = predict(LASSO_fit_train, newx = x_matrix_test, s = 10)[,1])
+
+submission2 <- test.mis %>%
+  mutate(SalePrice = exp(test.mis$y_hat_LASSO)) %>%
+  select(Id, SalePrice)
+
+write_csv(submission, path = "data/submission_diminshing_returns.csv")
 ```
 
 Comparing both RMLSE's here:
