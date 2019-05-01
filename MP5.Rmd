@@ -1,6 +1,6 @@
 ---
 title: "SDS/CSC 293 Mini-Project 5: LASSO"
-author: "Group XX: WRITE YOUR NAMES HERE"
+author: "Group 18: Karen Santamaria, Mariama Jaiteh"
 date: "Thursday, May 2^nd^, 2019"
 output:
   html_document:
@@ -248,7 +248,6 @@ LASSO_CV <- cv.glmnet(
   type.measure = "mse"
 )
 
-# What is te smallest estimated mse?
 LASSO_CV %>%
   broom::tidy() %>%
   rename(mse = estimate) %>%
