@@ -205,13 +205,15 @@ submission <- test %>%
 write_csv(submission, path = "data/submission_due_diligence.csv")
 ```
 
+![](due_diligence.png){ width=100% }
+
 
 RMLSE on training  | RMLSE on test (via Kaggle)
 ------------- | -------------
-X             | Y
+0.003618587   |   0.22466
 
 
-
+The two RMLSEs are different because our training set has only 50 observations so when we fit/test the model, we notice that we are overfitting, hence why we have a lower RMLSE for training which is closer to 0. When we use our model on the full test, there are some scenarios that our model of 50 observations hasn't seen so the model might be way off with the predicted saleprice.  
 
 ***
 
@@ -341,15 +343,21 @@ submission2 <- test.mis %>%
 
 write_csv(submission, path = "data/submit_LASSO.csv")
 ```
+After running the LASSO model, we've noticed that the variables that has the higest effect on model is OverallQual which has the highest coefficient.There are other coefficients that are close to zero and there are others that are at zero or below. Before running the LASSO model, we thought that overallQual and OverallCond would have a good effect on model but OverallCond's coefficient is at 0. We're thinking that maybe they are correlated so using one of them is good enough(this is just an assumption though). 
+
+
+![](Lasso.png){ width=100% }
+
 
 Comparing both RMLSE's here:
 
 Method           | RMLSE on training  | RMLSE on test (via Kaggle)
 ---------------- | ------------------ | -------------
-Unregularized lm | X                  | Y
-LASSO            | A                  | B
+Unregularized lm | 0.003618587        | 0.22466
+LASSO            | 0.02440769         | 0.22466
 
 
+Looking at the two RMLSE values for Unregularized lm and LASSO they both seem that have the same score on kaggle which is 0.22466 but for the training RMLSEs the numbers are a bit different, the RMLSE for the unregularized lm is much closer to zero -- might be we are using all the variables in the model and with LASSO we are dropping variables that don't have much effect on model. 
 
 ***
 
