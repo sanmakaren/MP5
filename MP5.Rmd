@@ -167,10 +167,6 @@ fitted_points_1 <- model_1 %>%
   broom::augment()
 ```
 
-```{r}
-predicted_points_1 <- model_1 %>%
-  broom::augment(newdata = training.mis)
-```
 
 
 ***
@@ -185,8 +181,8 @@ predicted_points_1 <- model_1 %>%
 * Compare the two RMLSE's. If they are different, comment on why they might be different.
 
 ```{r}
-# Compute both RMLSE's here:
-rmsle_train = MLmetrics::RMSLE(y_pred = predicted_points_1$.fitted, y_true = predicted_points_1$log_SalePrice)
+# RMSLE for training data. Using MSE since we are working with log_SalePrice
+rmsle_train = MLmetrics::MSE(y_pred = fitted_points_1$.fitted, y_true = fitted_points_1$log_SalePrice)
 rmsle_train
 ```
 
@@ -198,6 +194,7 @@ predict_test <- model_1 %>%
 
 
 ```{r}
+#Getting RMSLE for test data
 submission <- test %>%
   mutate(SalePrice = exp(predict_test$.fitted)) %>%
   select(Id, SalePrice)
@@ -205,12 +202,12 @@ submission <- test %>%
 write_csv(submission, path = "data/submission_due_diligence.csv")
 ```
 
-![](due_diligence.png){ width=100% }
+![](score_screenshot_1.png){ width=100% }
 
 
 RMLSE on training  | RMLSE on test (via Kaggle)
 ------------- | -------------
-0.003618587   |   0.22466
+0.002258692   |   0.22466
 
 
 The two RMLSEs are different because our training set has only 50 observations so when we fit/test the model, we notice that we are overfitting, hence why we have a lower RMLSE for training which is closer to 0. When we use our model on the full test, there are some scenarios that our model of 50 observations hasn't seen so the model might be way off with the predicted saleprice.  
@@ -312,7 +309,7 @@ LASSO_coefficients_plot +
 
 # Point of diminishing returns
 
-1. In qualitative language, comment on the resulting amoung of shrinkage in the LASSO model?
+1. In qualitative language, comment on the resulting amount of shrinkage in the LASSO model?
 1. Obtain the RMLSE of the fitted model
       a) on the `training` data
       b) on the `test` data via a submission to Kaggle `data/submit_LASSO.csv` that we will test.
@@ -321,10 +318,19 @@ LASSO_coefficients_plot +
 ```{r}
 # Compute both RMLSE's here:
 
+
+#Get predictions from f_hat LASSO model using lambda_star
+training.mis <- training.mis %>%
+  mutate(y_hat_LASSO = predict(LASSO_fit, newx = x_matrix, s = lambda_star)[,1])
+
 #RMSLE for training
-min(LASSO_CV_df$mse)
+rmsle_lasso = MLmetrics::MSE(y_pred = training.mis$y_hat_LASSO, y_true = training.mis$log_SalePrice)
+rmsle_lasso
+
+
 
 LASSO_fit_train <- glmnet(x = x_matrix, y = training$log_SalePrice, alpha = 1, lambda = lambda_star)
+
 
 x_matrix_test <- test.mis %>%
   # Create temporary outcome variance just to get model matrix to work:
@@ -341,23 +347,24 @@ submission2 <- test.mis %>%
   mutate(SalePrice = exp(test.mis$y_hat_LASSO)) %>%
   select(Id, SalePrice)
 
-write_csv(submission, path = "data/submit_LASSO.csv")
+write_csv(submission2, path = "data/submit_LASSO.csv")
 ```
 After running the LASSO model, we've noticed that the variables that has the higest effect on model is OverallQual which has the highest coefficient.There are other coefficients that are close to zero and there are others that are at zero or below. Before running the LASSO model, we thought that overallQual and OverallCond would have a good effect on model but OverallCond's coefficient is at 0. We're thinking that maybe they are correlated so using one of them is good enough(this is just an assumption though). 
 
 
-![](Lasso.png){ width=100% }
+![](score_screenshot_2.png){ width=100% }
 
 
 Comparing both RMLSE's here:
 
 Method           | RMLSE on training  | RMLSE on test (via Kaggle)
 ---------------- | ------------------ | -------------
-Unregularized lm | 0.003618587        | 0.22466
-LASSO            | 0.02440769         | 0.22466
+Unregularized lm | 0.002258692        | 0.22466
+LASSO            | 0.01008322         | 0.18082
 
 
-Looking at the two RMLSE values for Unregularized lm and LASSO they both seem that have the same score on kaggle which is 0.22466 but for the training RMLSEs the numbers are a bit different, the RMLSE for the unregularized lm is much closer to zero -- might be we are using all the variables in the model and with LASSO we are dropping variables that don't have much effect on model. 
+The LASSO model preforms better than the Unregularized model based on RMSLE values obtained from test data on Kaggle. This  makes sense since with the LASSO model, the more important variables are given more weight. This seems to be because LASSO model to suffers less from overfitting which makes the training RMSLE bigger but overall, when making predictions on the test data gives better preformance.
+
 
 ***
 
@@ -370,8 +377,84 @@ Looking at the two RMLSE values for Unregularized lm and LASSO they both seem th
 1. Try to get the best Kaggle leaderboard score!
 
 
+```{r, results="hide"}
 
-![](score_screenshot.png){ width=100% }
+model_formula_2 <- "log_SalePrice ~ MSSubClass + LotFrontage + LotArea + 
+OverallQual + OverallCond + YearBuilt + YearRemodAdd + MasVnrArea + BsmtFinSF1 + 
+BsmtFinSF2 + BsmtUnfSF + TotalBsmtSF + FirstFlrSF + SecondFlrSF + LowQualFinSF + 
+GrLivArea + BsmtFullBath + BsmtHalfBath + FullBath + HalfBath + BedroomAbvGr + 
+KitchenAbvGr + TotRmsAbvGrd + Fireplaces + GarageYrBlt + GarageCars + GarageArea + 
+WoodDeckSF + OpenPorchSF + EnclosedPorch + ThirdSsnPorch + ScreenPorch + PoolArea + 
+MiscVal + MoSold + YrSold + HouseStyle" %>% 
+  as.formula()
+
+
+
+#make matrix possible for NA values
+training.mis$HouseStyle[is.na(training.mis$HouseStyle)] <- "None"
+test.mis$HouseStyle[is.na(test.mis$HouseStyle)] <- "None"
+
+training.mis$HouseStyle <- as.factor(training.mis$HouseStyle)
+test.mis$HouseStyle <- as.factor(test.mis$HouseStyle)
+
+
+x_matrix_2 <- training.mis %>%
+  modelr::model_matrix(model_formula_2, data = .) %>%
+  select(-`(Intercept)`) %>%
+as.matrix()
+
+#lambda_inputs <- seq(from = 0, to = 1000)
+lambda_inputs <- 10^seq(from = -5, to = 3, length = 100)
+
+LASSO_fit_2 <- glmnet(x = x_matrix_2, y = training$log_SalePrice, alpha = 1, lambda = lambda_inputs)
+
+
+LASSO_CV_2 <- cv.glmnet(
+  x = x_matrix,
+  y = training$log_SalePrice,
+  alpha = 1,
+  lambda = lambda_inputs,
+  nfolds = 10,
+  type.measure = "mse"
+)
+
+LASSO_CV_2  %>%
+  broom::tidy() %>%
+  rename(mse = estimate) %>%
+  arrange(mse)
+
+
+lambda_star_2 <- LASSO_CV_2$lambda.min
+
+
+#Get predictions from f_hat LASSO model using lambda_star
+training.mis <- training.mis %>%
+  mutate(y_hat_LASSO_2 = predict(LASSO_fit_2, newx = x_matrix_2, s = lambda_star_2)[,1])
+
+LASSO_fit_train_2 <- glmnet(x = x_matrix_2, y = training$log_SalePrice, alpha = 1, lambda = lambda_star_2)
+
+x_matrix_test_2 <- test.mis %>%
+  # Create temporary outcome variance just to get model matrix to work:
+  mutate(log_SalePrice = 1) %>%
+  modelr::model_matrix(model_formula_2, data = .) %>%
+  select(-`(Intercept)`) %>%
+as.matrix()
+
+# Predict y_hat's for test data using model and same lambda = 10.
+test.mis <- test.mis %>%
+  mutate(y_hat_LASSO_2 = predict(LASSO_fit_train_2, newx = x_matrix_test_2, s = 10)[,1])
+
+submission3 <- test.mis %>%
+  mutate(SalePrice = exp(test.mis$y_hat_LASSO_2)) %>%
+  select(Id, SalePrice)
+
+write_csv(submission3, path = "data/submit_LASSO_2.csv")
+```
+
+
+
+
+![](score_screenshot_3.png){ width=100% }
 
 
 
